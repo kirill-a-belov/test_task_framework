@@ -9,6 +9,7 @@ import (
 
 type Logger interface {
 	Error(err error, args ...interface{})
+	Info(args ...interface{})
 }
 
 type log struct {
@@ -25,6 +26,10 @@ func (l *log) Error(err error, args ...interface{}) {
 	}
 
 	l.l.Println(result.String())
+}
+
+func (l *log) Info(args ...interface{}) {
+	l.Error(nil, args...)
 }
 
 func New(prefix string) Logger {

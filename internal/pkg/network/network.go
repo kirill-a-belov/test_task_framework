@@ -2,11 +2,10 @@ package network
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/gob"
+	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 
 	"github.com/pkg/errors"
-
-	"playGround/utils/tracing"
 )
 
 type conn interface {
@@ -15,34 +14,28 @@ type conn interface {
 }
 
 func Send[A any](ctx context.Context, c conn, msg A) error {
-	span, _ := tracing.NewSpan(ctx, "utils.network.Conn.Send")
-	defer span.Close()
+	_, span := tracer.Start(ctx, "internal.pkg.network.Send")
+	defer span.End()
 
-	body, err := json.Marshal(msg)
-	if err != nil {
-		return errors.Wrap(err, "marshalling initial request")
-	}
-	if _, err := c.Write(body); err != nil {
-		return errors.Wrap(err, "sending initial request")
+	enc := gob.NewEncoder(c)
+
+	if err := enc.Encode(msg); err != nil {
+		return errors.Wrapf(err, "encoding msg (%v)", msg)
 	}
 
 	return nil
 }
 
 func Receive[A any](ctx context.Context, c conn) (A, error) {
-	span, _ := tracing.NewSpan(ctx, "utils.network.Conn.Receive")
-	defer span.Close()
+	_, span := tracer.Start(ctx, "internal.pkg.network.Receive")
+	defer span.End()
 
 	var result A
 
-	buffer := make([]byte, 1024)
-	n, err := c.Read(buffer)
-	if err != nil {
-		return result, errors.Wrap(err, "reading server question")
-	}
-	buffer = buffer[:n]
-	if err := json.Unmarshal(buffer, &result); err != nil {
-		return result, errors.Wrap(err, "unmarshalling server question request")
+	dec := gob.NewDecoder(c)
+
+	if err := dec.Decode(&result); err != nil {
+		return result, errors.Wrapf(err, "decoding msg (%v)", result)
 	}
 
 	return result, nil

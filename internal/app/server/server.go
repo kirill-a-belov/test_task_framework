@@ -3,16 +3,14 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/kirill-a-belov/temp_test_task/utils/sha256"
-	"github.com/kirill-a-belov/temp_test_task/utils/tracing"
 	"github.com/kirill-a-belov/test_task_framework/internal/app/server/pkg/config"
-	"github.com/kirill-a-belov/test_task_framework/internal/app/server/pkg/protocol"
+	"github.com/kirill-a-belov/test_task_framework/internal/pkg/protocol"
 	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
-	"math/rand"
+	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 	"net"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -27,14 +25,13 @@ import (
 * Нет таймаутов*/
 
 func New(ctx context.Context, config *config.Config) *Server {
-	span, _ := tracing.NewSpan(ctx, "server.New")
-	defer span.Close()
+	_, span := tracer.Start(ctx, "internal.app.server.New")
+	defer span.End()
 
 	return &Server{
-		config:    config,
-		stopChan:  make(chan struct{}),
-		logger:    logger.New("server"),
-		quoteList: []string{"example quote one", "example quote two", "example quote three"},
+		config:   config,
+		stopChan: make(chan struct{}),
+		logger:   logger.New("server"),
 	}
 }
 
@@ -44,16 +41,15 @@ type Server struct {
 	logger   logger.Logger
 	connCnt  atomic.Int32
 
-	listner   net.Listener
-	quoteList []string
+	listener net.Listener
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	span, _ := tracing.NewSpan(ctx, "internal.app.server.Start")
-	defer span.Close()
+	_, span := tracer.Start(ctx, "internal.app.server.Server.Start")
+	defer span.End()
 
 	var err error
-	if s.listner, err = net.Listen(protocol.TCPType, fmt.Sprintf("localhost:%d", s.config.serverPort)); err != nil {
+	if s.listener, err = net.Listen(protocol.TCPType, fmt.Sprintf("localhost:%d", s.config.Port)); err != nil {
 		return errors.Wrap(err, "start listener")
 	}
 
@@ -63,38 +59,32 @@ func (s *Server) Start(ctx context.Context) error {
 }
 
 func (s *Server) processor(ctx context.Context) {
-	span, _ := tracing.NewSpan(ctx, "internal.app.server.processor")
-	defer span.Close()
+	_, span := tracer.Start(ctx, "internal.app.server.Server.processor")
+	defer span.End()
 
 	for {
 		select {
 		case <-s.stopChan:
 		default:
-			conn, err := s.listner.Accept()
-			if err != nil {
-				s.logger.Println("connection processing",
-					"error", err,
-				)
+			if s.connCnt.Load() > int32(s.config.ConnPoolSize) {
+				s.logger.Info("max conn pool size exceeded")
+				const connReleaseWaitTime = time.Millisecond
+				time.Sleep(connReleaseWaitTime)
+
+				continue
 			}
 
-			if s.connCnt.Load() > int32(s.config.maxConns) {
-				if _, err := conn.Write([]byte("max conns exceeded")); err != nil {
-					s.logger.Println("max conn response sending",
-						"error", err,
-					)
-				}
-				conn.Close()
-				continue
+			conn, err := s.listener.Accept()
+			if err != nil {
+				s.logger.Error(err, "connection processing")
 			}
 
 			s.connCnt.Add(1)
 			go func() {
 				defer conn.Close()
 				defer s.connCnt.Add(-1)
-				if err := s.serv(ctx, conn); err != nil {
-					s.logger.Println("connection serving",
-						"error", err,
-					)
+				if err := s.serv(conn); err != nil {
+					s.logger.Error(err, "connection serving")
 				}
 			}()
 		}
@@ -102,17 +92,19 @@ func (s *Server) processor(ctx context.Context) {
 }
 
 func (s *Server) Stop(ctx context.Context) {
-	span, _ := tracing.NewSpan(ctx, "internal.app.server.Stop")
-	defer span.Close()
+	_, span := tracer.Start(ctx, "internal.app.server.Server.Stop")
+	defer span.End()
 
 	close(s.stopChan)
 }
 
-func (s *Server) serv(ctx context.Context, conn net.Conn) error {
-	span, _ := tracing.NewSpan(ctx, "internal.app.server.serv")
-	defer span.Close()
+func (s *Server) serv(conn net.Conn) error {
+	ctx, span := tracer.Start(context.Background(), "internal.app.server.Server.serv")
+	defer span.End()
 
-	clientWelcome := make([]byte, 1024)
+	ctx, _ = context.WithDeadline(ctx, time.Now().Add(s.config.ConnTTL))
+
+	/*/clientWelcome := make([]byte, 1024)
 	n, err := conn.Read(clientWelcome)
 	if err != nil {
 		return errors.Wrap(err, "reading client welcome")
@@ -188,6 +180,6 @@ func (s *Server) serv(ctx context.Context, conn net.Conn) error {
 	if _, err := conn.Write(serverResultResponse); err != nil {
 		return errors.Wrap(err, "sending server result response")
 	}
-
+	*/
 	return nil
 }

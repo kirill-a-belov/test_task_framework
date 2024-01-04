@@ -3,35 +3,21 @@ package protocol
 type MessageType string
 
 const (
-	MessageTypeClientWelcome  MessageType = "client_welcome"
-	MessageTypeServerQuestion             = "server_question"
-	MessageTypeClientAnswer               = "client_answer"
-	MessageTypeServerResult               = "server_result"
+	MessageTypeUndefined MessageType = "undefined"
+	MessageTypeRequest               = "request"
+	MessageTypeResponse              = "response"
 )
 
 type Message struct {
 	Type MessageType
 }
 
-type ClientWelcomeRequest struct {
+type Request struct {
 	Message
+	Payload []int
 }
 
-type ServerQuestionRequest struct {
+type Response struct {
 	Message
-	Prefix     int64
-	Difficulty int
-}
-
-type ClientAnswerResponse struct {
-	Message
-	Nonce      int64
-	Prefix     int64
-	Difficulty int
-}
-
-type ServerResultResponse struct {
-	Message
-	Success bool
-	Payload string
+	Payload int
 }

@@ -3,72 +3,45 @@ package config
 import (
 	"context"
 	"fmt"
-	"github.com/kirill-a-belov/temp_test_task/utils/tracing"
+	"github.com/caarlos0/env"
+	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 	"github.com/pkg/errors"
-	"os"
-	"strconv"
 	"time"
 )
 
 type Config struct {
-	port         int
-	connPoolSize int
-	connTTL      time.Duration
+	Port         int           `env:"SERVER_PORT"`
+	ConnPoolSize int           `env:"SERVER_CONN_POOL_SIZE"`
+	ConnTTL      time.Duration `env:"SERVER_CONN_TTL"`
 }
 
 func (c *Config) validate() error {
-	if c.port < 0 || c.port > 65535 {
-		return fmt.Errorf("invalid port number: %d", c.port)
+	if c.Port < 0 || c.Port > 65535 {
+		return fmt.Errorf("invalid Port number: %d", c.Port)
 	}
 
-	if c.connPoolSize < 0 || c.connPoolSize > 1024 {
-		return fmt.Errorf("invalid connection pool size: %d", c.connPoolSize)
+	if c.ConnPoolSize < 1 || c.ConnPoolSize > 1024 {
+		return fmt.Errorf("invalid connection pool size: %d", c.ConnPoolSize)
 	}
 
-	if c.connTTL < time.Millisecond || c.connTTL > time.Second {
-		return fmt.Errorf("invalid connextion TTL: %v", c.connPoolSize)
+	if c.ConnTTL < time.Millisecond || c.ConnTTL > time.Second {
+		return fmt.Errorf("invalid connextion TTL: %v", c.ConnPoolSize)
 	}
 
 	return nil
 }
 
-const (
-	portEnvVarName         = "SERVER_PORT"
-	connPoolSizeEnvVarName = "SERVER_CONN_POOL_SIZE"
-	connTTLEnvVarName      = "SERVER_CONN_TTL_SEC"
-)
-
 func (c *Config) Load(ctx context.Context) error {
-	span, _ := tracing.NewSpan(ctx, "server.Config.Load")
-	defer span.Close()
+	_, span := tracer.Start(ctx, "server.Config.Load")
+	defer span.End()
 
-	port := os.Getenv(portEnvVarName)
-	if port == "" {
-		return errors.Errorf("empty env var (%s) value", portEnvVarName)
-	}
-	var err error
-	if c.port, err = strconv.Atoi(port); err != nil {
-		return errors.Wrapf(err, "parsing value (%s) from env var (%s)", port, portEnvVarName)
+	if err := env.Parse(c); err != nil {
+		return errors.Wrap(err, "config loading")
 	}
 
-	connPoolSize := os.Getenv(connPoolSizeEnvVarName)
-	if connPoolSize == "" {
-		return errors.Errorf("empty env var (%s) value", connPoolSize)
-	}
-	if c.connPoolSize, err = strconv.Atoi(connPoolSize); err != nil {
-		return errors.Wrapf(err, "parsing value (%s) from env var (%s)", connPoolSize, connPoolSizeEnvVarName)
+	if err := c.validate(); err != nil {
+		return errors.Wrap(err, "config validation")
 	}
 
-	connTTLSec := os.Getenv(connTTLEnvVarName)
-	if connTTLSec == "" {
-		return errors.Errorf("empty env var (%s) value", connTTLSec)
-	}
-
-	connTTLSecParsed, err := strconv.Atoi(connTTLSec)
-	if err != nil {
-		return errors.Wrapf(err, "parsing value (%s) from env var (%s)", connTTLSec, connTTLEnvVarName)
-	}
-	c.connTTL = time.Second * time.Duration(connTTLSecParsed)
-
-	return c.validate()
+	return nil
 }
