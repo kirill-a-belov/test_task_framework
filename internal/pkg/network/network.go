@@ -4,16 +4,12 @@ import (
 	"context"
 	"encoding/gob"
 	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
+	"io"
 
 	"github.com/pkg/errors"
 )
 
-type conn interface {
-	Write(b []byte) (int, error)
-	Read(b []byte) (int, error)
-}
-
-func Send[A any](ctx context.Context, c conn, msg A) error {
+func Send[A any](ctx context.Context, c io.ReadWriter, msg A) error {
 	_, span := tracer.Start(ctx, "internal.pkg.network.Send")
 	defer span.End()
 
@@ -26,7 +22,7 @@ func Send[A any](ctx context.Context, c conn, msg A) error {
 	return nil
 }
 
-func Receive[A any](ctx context.Context, c conn) (A, error) {
+func Receive[A any](ctx context.Context, c io.ReadWriter) (A, error) {
 	_, span := tracer.Start(ctx, "internal.pkg.network.Receive")
 	defer span.End()
 

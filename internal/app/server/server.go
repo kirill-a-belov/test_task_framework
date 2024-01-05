@@ -5,24 +5,20 @@ import (
 	"context"
 	"fmt"
 	"github.com/kirill-a-belov/test_task_framework/internal/app/server/pkg/config"
+	"github.com/kirill-a-belov/test_task_framework/internal/pkg/network"
 	"github.com/kirill-a-belov/test_task_framework/internal/pkg/protocol"
+	"github.com/kirill-a-belov/test_task_framework/pkg/context_helper"
+
 	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
+	"github.com/kirill-a-belov/test_task_framework/pkg/math"
 	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
+	"io"
 	"net"
 	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
 )
-
-/** Нет тайм-аутов, злоумышленник легко может занять все 100 доступных соединений
-* Контекст в хендлере соединения из конструктора сервера
-* Использование fmt.Sprintf для построения хеша
-* Текстовый протокол
-* math.Rand для рандома
-* нет обработки ошибок в сервер внутри процессора
-* God Object из функций с логикой расчета челенжа
-* Нет таймаутов*/
 
 func New(ctx context.Context, config *config.Config) *Server {
 	_, span := tracer.Start(ctx, "internal.app.server.New")
@@ -32,6 +28,9 @@ func New(ctx context.Context, config *config.Config) *Server {
 		config:   config,
 		stopChan: make(chan struct{}),
 		logger:   logger.New("server"),
+		listenerStarter: func() (net.Listener, error) {
+			return net.Listen(protocol.TCPType, fmt.Sprintf("localhost:%d", config.Port))
+		},
 	}
 }
 
@@ -41,7 +40,8 @@ type Server struct {
 	logger   logger.Logger
 	connCnt  atomic.Int32
 
-	listener net.Listener
+	listener        net.Listener
+	listenerStarter func() (net.Listener, error)
 }
 
 func (s *Server) Start(ctx context.Context) error {
@@ -49,16 +49,16 @@ func (s *Server) Start(ctx context.Context) error {
 	defer span.End()
 
 	var err error
-	if s.listener, err = net.Listen(protocol.TCPType, fmt.Sprintf("localhost:%d", s.config.Port)); err != nil {
+	if s.listener, err = s.listenerStarter(); err != nil {
 		return errors.Wrap(err, "start listener")
 	}
 
-	go s.processor(ctx)
+	go s.processor(ctx, serv)
 
 	return nil
 }
 
-func (s *Server) processor(ctx context.Context) {
+func (s *Server) processor(ctx context.Context, servFunc func(io.ReadWriter) error) {
 	_, span := tracer.Start(ctx, "internal.app.server.Server.processor")
 	defer span.End()
 
@@ -83,7 +83,9 @@ func (s *Server) processor(ctx context.Context) {
 			go func() {
 				defer conn.Close()
 				defer s.connCnt.Add(-1)
-				if err := s.serv(conn); err != nil {
+				if err := context_helper.RunWithTimeout(ctx, s.config.ConnTTL, func() error {
+					return servFunc(conn)
+				}); err != nil {
 					s.logger.Error(err, "connection serving")
 				}
 			}()
@@ -96,90 +98,29 @@ func (s *Server) Stop(ctx context.Context) {
 	defer span.End()
 
 	close(s.stopChan)
+	_ = s.listener.Close()
 }
 
-func (s *Server) serv(conn net.Conn) error {
+func serv(conn io.ReadWriter) error {
 	ctx, span := tracer.Start(context.Background(), "internal.app.server.Server.serv")
 	defer span.End()
 
-	ctx, _ = context.WithDeadline(ctx, time.Now().Add(s.config.ConnTTL))
-
-	/*/clientWelcome := make([]byte, 1024)
-	n, err := conn.Read(clientWelcome)
+	request, err := network.Receive[protocol.Request](ctx, conn)
 	if err != nil {
-		return errors.Wrap(err, "reading client welcome")
+		return errors.Wrap(err, "receiving server request")
 	}
-	clientWelcome = clientWelcome[:n]
-	clientWelcomeRequest := &protocol.ClientWelcomeRequest{}
-	if err := json.Unmarshal(clientWelcome, clientWelcomeRequest); err != nil {
-		return errors.Wrap(err, "unmarshalling client welcome request")
-	}
-	if clientWelcomeRequest.Type != protocol.MessageTypeClientWelcome {
-		return errors.Errorf("client welcome request: received wrong message (%s)", clientWelcomeRequest)
+	if request.Type != protocol.MessageTypeRequest {
+		return errors.Errorf("server requrest: received wrong message (%v)", request)
 	}
 
-	sendingPrefix := rand.Int63()
-	serverQuestionResponse, err := json.Marshal(protocol.ServerQuestionRequest{
+	if err := network.Send(ctx, conn, protocol.Response{
 		Message: protocol.Message{
-			Type: protocol.MessageTypeServerQuestion,
+			Type: protocol.MessageTypeResponse,
 		},
-		Prefix:     sendingPrefix,
-		Difficulty: s.config.difficulty,
-	})
-	if err != nil {
-		return errors.Wrap(err, "marshalling server question response")
-	}
-	if _, err := conn.Write(serverQuestionResponse); err != nil {
-		return errors.Wrap(err, "sending server question response")
+		Payload: math.Sum(request.Payload...),
+	}); err != nil {
+		return errors.Wrap(err, "sending response")
 	}
 
-	clientAnswer := make([]byte, 1024)
-	n, err = conn.Read(clientAnswer)
-	if err != nil {
-		return errors.Wrap(err, "reading client welcome")
-	}
-	clientAnswer = clientAnswer[:n]
-	clientAnswerResponse := &protocol.ClientAnswerResponse{}
-	if err := json.Unmarshal(clientAnswer, clientAnswerResponse); err != nil {
-		return errors.Wrap(err, "unmarshalling client welcome response")
-	}
-	if clientAnswerResponse.Type != protocol.MessageTypeClientAnswer {
-		return errors.Errorf("client welcome response: received wrong message (%s)", clientAnswerResponse)
-	}
-
-	resp := protocol.ServerResultResponse{
-		Message: protocol.Message{
-			Type: protocol.MessageTypeServerResult,
-		},
-	}
-
-	var ok bool
-
-	fakeResponse := clientAnswerResponse.Prefix != sendingPrefix || clientAnswerResponse.Difficulty != s.config.difficulty
-	if !fakeResponse {
-		ok = sha256.Check(
-			ctx,
-			clientAnswerResponse.Nonce,
-			clientAnswerResponse.Prefix,
-			clientAnswerResponse.Difficulty,
-		)
-	}
-
-	switch {
-	case ok:
-		resp.Success = true
-		resp.Payload = s.quoteList[rand.Intn(2)]
-	default:
-		resp.Payload = "invalid result"
-	}
-
-	serverResultResponse, err := json.Marshal(resp)
-	if err != nil {
-		return errors.Wrap(err, "marshalling server result response")
-	}
-	if _, err := conn.Write(serverResultResponse); err != nil {
-		return errors.Wrap(err, "sending server result response")
-	}
-	*/
 	return nil
 }

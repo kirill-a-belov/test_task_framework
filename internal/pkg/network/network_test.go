@@ -2,6 +2,8 @@ package network
 
 import (
 	"context"
+	"github.com/kirill-a-belov/test_task_framework/pkg/test_helper"
+	"io"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -13,12 +15,12 @@ import (
 func TestSend(t *testing.T) {
 	testCases := []struct {
 		name      string
-		args      func() (conn, interface{}, error)
+		args      func() (io.ReadWriter, interface{}, error)
 		wantError bool
 	}{
 		{
 			name: "Success",
-			args: func() (conn, interface{}, error) {
+			args: func() (io.ReadWriter, interface{}, error) {
 				resultMsg := exampleMessage{
 					ExampleFieldOne: 1,
 					ExampleFieldTwo: "example",
@@ -26,27 +28,27 @@ func TestSend(t *testing.T) {
 
 				mockBytesPartOne := []byte{0x43, 0x7f, 0x3, 0x1, 0x1, 0xe, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x1, 0xff, 0x80, 0x0, 0x1, 0x2, 0x1, 0xf, 0x45, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x4f, 0x6e, 0x65, 0x1, 0x4, 0x0, 0x1, 0xf, 0x45, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x54, 0x77, 0x6f, 0x1, 0xc, 0x0, 0x0, 0x0}
 				mockBytesPartTwo := []byte{0xe, 0xff, 0x80, 0x1, 0x2, 0x1, 0x7, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x0}
-				connMock := &connMock{}
-				connMock.On("Write", mockBytesPartOne).Return(len(mockBytesPartOne), nil)
-				connMock.On("Write", mockBytesPartTwo).Return(len(mockBytesPartTwo), nil)
+				readWriterMock := &test_helper.ReadWriterMock{}
+				readWriterMock.On("Write", mockBytesPartOne).Return(len(mockBytesPartOne), nil)
+				readWriterMock.On("Write", mockBytesPartTwo).Return(len(mockBytesPartTwo), nil)
 
-				return connMock, resultMsg, nil
+				return readWriterMock, resultMsg, nil
 			},
 			wantError: false,
 		},
 		{
-			name: "Bad conn",
-			args: func() (conn, interface{}, error) {
-				connMock := &connMock{}
-				connMock.On("Write", mock.Anything).Return(0, errors.New("example error"))
+			name: "Bad readWriter",
+			args: func() (io.ReadWriter, interface{}, error) {
+				readWriterMock := &test_helper.ReadWriterMock{}
+				readWriterMock.On("Write", mock.Anything).Return(0, errors.New("example error"))
 
-				return connMock, nil, nil
+				return readWriterMock, nil, nil
 			},
 			wantError: true,
 		},
 		{
 			name: "Bad msg",
-			args: func() (conn, interface{}, error) {
+			args: func() (io.ReadWriter, interface{}, error) {
 				return nil, make(chan int), nil
 			},
 			wantError: true,
@@ -74,69 +76,54 @@ type exampleMessage struct {
 	ExampleFieldTwo string
 }
 
-type connMock struct {
-	mock.Mock
-}
-
-func (cm *connMock) Write(b []byte) (int, error) {
-	args := cm.Called(b)
-
-	return args.Int(0), args.Error(1)
-}
-func (cm *connMock) Read(b []byte) (int, error) {
-	args := cm.Called(b)
-
-	return args.Int(0), args.Error(1)
-}
-
 func TestReceive(t *testing.T) {
 	testCases := []struct {
 		name      string
-		args      func() (conn, interface{}, error)
+		args      func() (io.ReadWriter, interface{}, error)
 		wantError bool
 	}{
 		{
 			name: "Success",
-			args: func() (conn, interface{}, error) {
+			args: func() (io.ReadWriter, interface{}, error) {
 				resultMsg := exampleMessage{
 					ExampleFieldOne: 1,
 					ExampleFieldTwo: "example",
 				}
 
 				mockBytesPartOne := []byte{0x43, 0x7f, 0x3, 0x1, 0x1, 0xe, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x1, 0xff, 0x80, 0x0, 0x1, 0x2, 0x1, 0xf, 0x45, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x4f, 0x6e, 0x65, 0x1, 0x4, 0x0, 0x1, 0xf, 0x45, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x54, 0x77, 0x6f, 0x1, 0xc, 0x0, 0x0, 0x0, 0xe, 0xff, 0x80, 0x1, 0x2, 0x1, 0x7, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x0}
-				connMock := &connMock{}
-				connMock.On("Read", mock.Anything).
+				readWriterMock := &test_helper.ReadWriterMock{}
+				readWriterMock.On("Read", mock.Anything).
 					Run(func(args mock.Arguments) {
 						bytes := args[0].([]byte)
 						copy(bytes[:], mockBytesPartOne)
 					}).
 					Return(len(mockBytesPartOne), nil)
 
-				return connMock, resultMsg, nil
+				return readWriterMock, resultMsg, nil
 			},
 			wantError: false,
 		},
 		{
-			name: "Bad conn",
-			args: func() (conn, interface{}, error) {
-				connMock := &connMock{}
-				connMock.On("Read", mock.Anything).Return(1, errors.New("example error"))
+			name: "Bad readWriter",
+			args: func() (io.ReadWriter, interface{}, error) {
+				readWriterMock := &test_helper.ReadWriterMock{}
+				readWriterMock.On("Read", mock.Anything).Return(1, errors.New("example error"))
 
-				return connMock, nil, nil
+				return readWriterMock, nil, nil
 			},
 			wantError: true,
 		},
 		{
 			name: "Bad msg",
-			args: func() (conn, interface{}, error) {
-				connMock := &connMock{}
-				connMock.On("Read", mock.Anything).
+			args: func() (io.ReadWriter, interface{}, error) {
+				readWriterMock := &test_helper.ReadWriterMock{}
+				readWriterMock.On("Read", mock.Anything).
 					Run(func(args mock.Arguments) {
 						bytes := args[0].([]byte)
 						copy(bytes[:], "example bad msg")
 					}).
 					Return(1, nil)
-				return connMock, nil, nil
+				return readWriterMock, nil, nil
 			},
 			wantError: true,
 		},
@@ -144,10 +131,10 @@ func TestReceive(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			conn, msg, err := tc.args()
+			readWriter, msg, err := tc.args()
 			require.NoError(t, err)
 
-			result, err := Receive[exampleMessage](context.Background(), conn)
+			result, err := Receive[exampleMessage](context.Background(), readWriter)
 			if tc.wantError {
 				assert.Error(t, err)
 
