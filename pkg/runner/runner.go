@@ -42,7 +42,7 @@ func (r *Runner) Run(ctx context.Context) {
 	defer span.End()
 
 	defer func() {
-		if pnc := recover(); r != nil {
+		if pnc := recover(); pnc != nil {
 			debug.PrintStack()
 			r.log.Error(fmt.Errorf("panic while command executionn (%v)", pnc))
 		}
@@ -55,6 +55,8 @@ func (r *Runner) Run(ctx context.Context) {
 
 		return
 	}
+
+	r.log.Info("app started")
 
 	select {
 	case <-r.sigChan:

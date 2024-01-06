@@ -1,0 +1,2 @@
+welcome:
+	@echo "cores: $(PROCS)"

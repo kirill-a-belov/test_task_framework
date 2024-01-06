@@ -2,10 +2,14 @@ package context_helper
 
 import (
 	"context"
+	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 	"time"
 )
 
-func RunWithTimeout(ctx context.Context, timeout time.Duration, runFunc func() error) error {
+func RunWithTimeout(timeout time.Duration, runFunc func() error) error {
+	ctx, span := tracer.Start(context.Background(), "pkg.context_helper.RunWithTimeout")
+	defer span.End()
+
 	ctx, _ = context.WithTimeout(ctx, timeout)
 
 	errChan := make(chan error)

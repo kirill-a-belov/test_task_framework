@@ -13,7 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"io"
 	"net"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestServer_Start(t *testing.T) {
@@ -75,11 +77,90 @@ func (lsm *listenerStarterMock) mockFunc() (net.Listener, error) {
 }
 
 func TestServer_processor(t *testing.T) {
+	testCaseList := []struct {
+		name string
+		args func() (*Server, func(io.ReadWriter) error)
+	}{
+		{
+			name: "Regular stop",
+			args: func() (*Server, func(io.ReadWriter) error) {
+				f := func(writer io.ReadWriter) error {
+					return nil
+				}
 
-	// Stop
-	// Conn limit
-	// Conn served ok
-	// Conn served with error
+				loggerMock := &test_helper.LoggerMock{}
+				loggerMock.On("Info", mock.Anything)
+
+				s := New(context.Background(), &config.Config{
+					ConnTTL: time.Second,
+				})
+				s.logger = loggerMock
+				s.listener = &listenerStub{}
+
+				return s, f
+			},
+		},
+		{
+			name: "Conn limit exceeded",
+			args: func() (*Server, func(io.ReadWriter) error) {
+				f := func(writer io.ReadWriter) error {
+					for {
+					}
+				}
+
+				loggerMock := &test_helper.LoggerMock{}
+				loggerMock.On("Info", mock.Anything).Twice()
+
+				s := New(context.Background(), &config.Config{
+					ConnTTL:      time.Second,
+					ConnPoolSize: 1,
+				})
+				s.logger = loggerMock
+				s.listener = &listenerStub{}
+
+				return s, f
+			},
+		},
+		{
+			name: "Serv func error",
+			args: func() (*Server, func(io.ReadWriter) error) {
+				f := func(writer io.ReadWriter) error {
+					return errors.New("example error")
+				}
+
+				loggerMock := &test_helper.LoggerMock{}
+				loggerMock.On("Error", mock.Anything).Once()
+				loggerMock.On("Info", mock.Anything)
+
+				s := New(context.Background(), &config.Config{
+					ConnTTL: time.Second,
+				})
+				s.logger = loggerMock
+				s.listener = &listenerStub{}
+
+				return s, f
+			},
+		},
+	}
+
+	for _, tc := range testCaseList {
+		t.Run(tc.name, func(t *testing.T) {
+			testServer, testFunc := tc.args()
+
+			ctx := context.Background()
+
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				testServer.processor(ctx, testFunc)
+				wg.Done()
+			}()
+
+			time.Sleep(time.Millisecond)
+			testServer.Stop(ctx)
+			wg.Wait()
+		})
+	}
 }
 
 func TestServer_Stop(t *testing.T) {
@@ -97,9 +178,6 @@ func TestServer_Stop(t *testing.T) {
 }
 
 func Test_serv(t *testing.T) {
-	//TODO//Wrong msg type
-	//TODO// Error in conn
-
 	testCaseList := []struct {
 		name      string
 		args      func() io.ReadWriter
@@ -135,6 +213,41 @@ func Test_serv(t *testing.T) {
 				return rwm
 			},
 		},
+		{
+			name: "Wrong msg type",
+			args: func() io.ReadWriter {
+				request := protocol.Request{
+					Message: protocol.Message{
+						Type: protocol.MessageTypeResponse,
+					},
+					Payload: []int{1, 2, 3},
+				}
+				requestBuffer := &bytes.Buffer{}
+				require.NoError(t, gob.NewEncoder(requestBuffer).Encode(request))
+
+				rwm := &test_helper.ReadWriterMock{}
+				rwm.On("Read", mock.Anything).
+					Run(func(args mock.Arguments) {
+						b := args[0].([]byte)
+						copy(b[:], requestBuffer.Bytes())
+					}).
+					Return(1000, nil)
+
+				return rwm
+			},
+			wantError: true,
+		},
+		{
+			name: "Conn error",
+			args: func() io.ReadWriter {
+				rwm := &test_helper.ReadWriterMock{}
+				rwm.On("Read", mock.Anything).
+					Return(1000, errors.New("example error"))
+
+				return rwm
+			},
+			wantError: true,
+		},
 	}
 
 	for _, tc := range testCaseList {
@@ -149,4 +262,15 @@ func Test_serv(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
+}
+
+type listenerStub struct {
+	net.Listener
+}
+
+func (*listenerStub) Accept() (net.Conn, error) {
+	return &net.TCPConn{}, nil
+}
+func (*listenerStub) Close() error {
+	return nil
 }

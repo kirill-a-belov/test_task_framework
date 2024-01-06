@@ -9,7 +9,6 @@ import (
 
 func main() {
 	log := logger.New("cmd.server")
-
 	cmd := server.New(context.Background())
 
 	if err := cmd.Execute(); err != nil {

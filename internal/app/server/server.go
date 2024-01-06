@@ -48,6 +48,8 @@ func (s *Server) Start(ctx context.Context) error {
 	_, span := tracer.Start(ctx, "internal.app.server.Server.Start")
 	defer span.End()
 
+	s.logger.Info(fmt.Sprintf("config: %+v", *s.config))
+
 	var err error
 	if s.listener, err = s.listenerStarter(); err != nil {
 		return errors.Wrap(err, "start listener")
@@ -65,10 +67,14 @@ func (s *Server) processor(ctx context.Context, servFunc func(io.ReadWriter) err
 	for {
 		select {
 		case <-s.stopChan:
+			s.logger.Info("processor terminated")
+
+			return
 		default:
-			if s.connCnt.Load() > int32(s.config.ConnPoolSize) {
+			if s.connCnt.Load() >= int32(s.config.ConnPoolSize) {
 				s.logger.Info("max conn pool size exceeded")
-				const connReleaseWaitTime = time.Millisecond
+
+				const connReleaseWaitTime = 100 * time.Millisecond
 				time.Sleep(connReleaseWaitTime)
 
 				continue
@@ -77,13 +83,16 @@ func (s *Server) processor(ctx context.Context, servFunc func(io.ReadWriter) err
 			conn, err := s.listener.Accept()
 			if err != nil {
 				s.logger.Error(err, "connection processing")
-			}
 
+				continue
+			}
 			s.connCnt.Add(1)
+
 			go func() {
+
 				defer conn.Close()
 				defer s.connCnt.Add(-1)
-				if err := context_helper.RunWithTimeout(ctx, s.config.ConnTTL, func() error {
+				if err := context_helper.RunWithTimeout(s.config.ConnTTL, func() error {
 					return servFunc(conn)
 				}); err != nil {
 					s.logger.Error(err, "connection serving")
@@ -97,8 +106,8 @@ func (s *Server) Stop(ctx context.Context) {
 	_, span := tracer.Start(ctx, "internal.app.server.Server.Stop")
 	defer span.End()
 
-	close(s.stopChan)
 	_ = s.listener.Close()
+	close(s.stopChan)
 }
 
 func serv(conn io.ReadWriter) error {

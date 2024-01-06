@@ -1,7 +1,6 @@
 package context_helper
 
 import (
-	"context"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -15,60 +14,43 @@ func TestRunWithTimeout(t *testing.T) {
 
 	testCaseList := []struct {
 		name      string
-		args      func() (context.Context, time.Duration, func() error)
+		args      func() (time.Duration, func() error)
 		wantError bool
 	}{
 		{
 			name: "Success",
-			args: func() (context.Context, time.Duration, func() error) {
-				ctx := context.Background()
+			args: func() (time.Duration, func() error) {
 				timeout := time.Second
 				testFunc := func() error {
 					return nil
 				}
 
-				return ctx, timeout, testFunc
+				return timeout, testFunc
 			},
 			wantError: false,
 		},
 		{
 			name: "Error in func",
-			args: func() (context.Context, time.Duration, func() error) {
-				ctx := context.Background()
+			args: func() (time.Duration, func() error) {
 				timeout := time.Second
 				testFunc := func() error {
 					return errors.New("example error")
 				}
 
-				return ctx, timeout, testFunc
-			},
-			wantError: true,
-		},
-		{
-			name: "Context done",
-			args: func() (context.Context, time.Duration, func() error) {
-				ctx, cancel := context.WithCancel(context.Background())
-				cancel()
-				timeout := time.Second
-				testFunc := func() error {
-					return nil
-				}
-
-				return ctx, timeout, testFunc
+				return timeout, testFunc
 			},
 			wantError: true,
 		},
 		{
 			name: "Timeout exceeded",
-			args: func() (context.Context, time.Duration, func() error) {
-				ctx := context.Background()
+			args: func() (time.Duration, func() error) {
 				timeout := time.Millisecond
 				testFunc := func() error {
 					time.Sleep(time.Second)
 					return nil
 				}
 
-				return ctx, timeout, testFunc
+				return timeout, testFunc
 			},
 			wantError: true,
 		},

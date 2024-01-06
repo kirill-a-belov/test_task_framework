@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
+	"github.com/kirill-a-belov/test_task_framework/pkg/test_helper"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -24,7 +25,7 @@ func TestRunner_Run(t *testing.T) {
 				appMock.On("Start", mock.Anything).Return(nil)
 				appMock.On("Stop", mock.Anything)
 
-				logMock := &logMock{}
+				logMock := &test_helper.LoggerMock{}
 
 				return appMock, logMock
 			},
@@ -35,8 +36,8 @@ func TestRunner_Run(t *testing.T) {
 				appMock := &appMock{}
 				appMock.On("Start", mock.Anything).Return(errors.New("example error"))
 
-				logMock := &logMock{}
-				appMock.On("Error", mock.Anything)
+				logMock := &test_helper.LoggerMock{}
+				logMock.On("Error", mock.Anything)
 
 				return appMock, logMock
 			},
@@ -47,8 +48,8 @@ func TestRunner_Run(t *testing.T) {
 				appMock := &appMock{}
 				appMock.On("Start", mock.Anything).Panic("example panic")
 
-				logMock := &logMock{}
-				appMock.On("Error", mock.Anything)
+				logMock := &test_helper.LoggerMock{}
+				logMock.On("Error", mock.Anything)
 
 				return appMock, logMock
 			},
@@ -83,12 +84,4 @@ func (am *appMock) Start(context.Context) error {
 }
 func (am *appMock) Stop(context.Context) {
 	am.Called()
-}
-
-type logMock struct {
-	mock.Mock
-}
-
-func (lm *logMock) Error(err error, details ...interface{}) {
-	lm.Called(err, details)
 }
