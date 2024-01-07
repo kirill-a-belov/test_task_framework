@@ -3,10 +3,12 @@ package config
 import (
 	"context"
 	"fmt"
-	"github.com/caarlos0/env"
-	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
-	"github.com/pkg/errors"
 	"time"
+
+	"github.com/caarlos0/env"
+	"github.com/pkg/errors"
+
+	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 )
 
 type Config struct {

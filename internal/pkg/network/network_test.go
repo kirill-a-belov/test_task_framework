@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"github.com/kirill-a-belov/test_task_framework/pkg/test_helper"
 	"io"
 	"testing"
 
@@ -10,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kirill-a-belov/test_task_framework/pkg/test_helper"
 )
 
 func TestSend(t *testing.T) {

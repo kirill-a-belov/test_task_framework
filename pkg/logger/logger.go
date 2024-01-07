@@ -34,6 +34,6 @@ func (l *log) Info(args ...interface{}) {
 
 func New(prefix string) Logger {
 	return &log{
-		l: stdLog.New(os.Stdout, prefix, stdLog.LstdFlags),
+		l: stdLog.New(os.Stdout, fmt.Sprintf("%s: ", prefix), stdLog.LstdFlags),
 	}
 }

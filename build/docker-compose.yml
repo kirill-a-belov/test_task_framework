@@ -1,0 +1,22 @@
+version: "3"
+
+services:
+  server:
+    build:
+      context: ${PWD}
+      dockerfile: ${PWD}/build/server/Dockerfile
+    command: ./server
+    ports:
+      - "1234:1234"
+    environment:
+      SERVER_PORT: 1234
+      SERVER_CONN_POOL_SIZE: 100
+      SERVER_CONN_TTL: 1s
+
+
+#  client:
+#    build: client/
+#    command: ./client
+#    network_mode: host
+#    depends_on:
+#      - server

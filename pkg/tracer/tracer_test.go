@@ -32,7 +32,6 @@ func TestStart(t *testing.T) {
 				resultSpan.End()
 			})
 			assert.Equal(t, wantResult, resultCTX)
-
 		})
 	}
 }

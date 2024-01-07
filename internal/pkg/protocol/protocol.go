@@ -3,9 +3,8 @@ package protocol
 type MessageType string
 
 const (
-	MessageTypeUndefined MessageType = "undefined"
-	MessageTypeRequest               = "request"
-	MessageTypeResponse              = "response"
+	MessageTypeRequest  MessageType = "request"
+	MessageTypeResponse MessageType = "response"
 )
 
 type Message struct {

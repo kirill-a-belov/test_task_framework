@@ -3,10 +3,11 @@ package network
 import (
 	"context"
 	"encoding/gob"
-	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 	"io"
 
 	"github.com/pkg/errors"
+
+	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 )
 
 func Send[A any](ctx context.Context, c io.ReadWriter, msg A) error {

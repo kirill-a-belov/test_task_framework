@@ -10,6 +10,6 @@ func (lm *LoggerMock) Error(err error, details ...interface{}) {
 	lm.Called(err, details)
 }
 
-func (lm *LoggerMock) Info(details ...interface{}) {
+func (lm *LoggerMock) Info(...interface{}) {
 	lm.Called()
 }

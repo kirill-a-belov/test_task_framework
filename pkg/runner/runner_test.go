@@ -3,13 +3,15 @@ package runner
 import (
 	"context"
 	"errors"
-	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
-	"github.com/kirill-a-belov/test_task_framework/pkg/test_helper"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"os"
 	"syscall"
 	"testing"
+
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
+	"github.com/kirill-a-belov/test_task_framework/pkg/test_helper"
 )
 
 func TestRunner_Run(t *testing.T) {
@@ -82,6 +84,7 @@ func (am *appMock) Start(context.Context) error {
 
 	return args.Error(0)
 }
+
 func (am *appMock) Stop(context.Context) {
 	am.Called()
 }

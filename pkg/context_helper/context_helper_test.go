@@ -1,10 +1,11 @@
 package context_helper
 
 import (
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRunWithTimeout(t *testing.T) {

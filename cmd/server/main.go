@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
 
 	"github.com/kirill-a-belov/test_task_framework/internal/app/cmd/server"
+	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
 )
 
 func main() {

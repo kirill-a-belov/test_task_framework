@@ -1,23 +1,23 @@
-// TCP Server general implementation
+// Package server implements general TCP server
 package server
 
 import (
 	"context"
 	"fmt"
-	"github.com/kirill-a-belov/test_task_framework/internal/app/server/pkg/config"
-	"github.com/kirill-a-belov/test_task_framework/internal/pkg/network"
-	"github.com/kirill-a-belov/test_task_framework/internal/pkg/protocol"
-	"github.com/kirill-a-belov/test_task_framework/pkg/context_helper"
-
-	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
-	"github.com/kirill-a-belov/test_task_framework/pkg/math"
-	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 	"io"
 	"net"
 	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
+
+	"github.com/kirill-a-belov/test_task_framework/internal/app/server/pkg/config"
+	"github.com/kirill-a-belov/test_task_framework/internal/pkg/network"
+	"github.com/kirill-a-belov/test_task_framework/internal/pkg/protocol"
+	"github.com/kirill-a-belov/test_task_framework/pkg/context_helper"
+	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
+	"github.com/kirill-a-belov/test_task_framework/pkg/math"
+	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 )
 
 func New(ctx context.Context, config *config.Config) *Server {
@@ -86,11 +86,12 @@ func (s *Server) processor(ctx context.Context, servFunc func(io.ReadWriter) err
 
 				continue
 			}
+
 			s.connCnt.Add(1)
-
 			go func() {
-
-				defer conn.Close()
+				defer func(conn net.Conn) {
+					_ = conn.Close()
+				}(conn)
 				defer s.connCnt.Add(-1)
 				if err := context_helper.RunWithTimeout(s.config.ConnTTL, func() error {
 					return servFunc(conn)

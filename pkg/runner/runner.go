@@ -3,12 +3,13 @@ package runner
 import (
 	"context"
 	"fmt"
-	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
-	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"syscall"
+
+	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
+	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 )
 
 type appController interface {
@@ -46,8 +47,6 @@ func (r *Runner) Run(ctx context.Context) {
 			debug.PrintStack()
 			r.log.Error(fmt.Errorf("panic while command executionn (%v)", pnc))
 		}
-
-		return
 	}()
 
 	if err := r.app.Start(ctx); err != nil {
@@ -58,9 +57,6 @@ func (r *Runner) Run(ctx context.Context) {
 
 	r.log.Info("app started")
 
-	select {
-	case <-r.sigChan:
-		r.app.Stop(ctx)
-	}
-
+	<-r.sigChan
+	r.app.Stop(ctx)
 }

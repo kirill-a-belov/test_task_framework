@@ -2,14 +2,14 @@ package server
 
 import (
 	"context"
+
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+
 	"github.com/kirill-a-belov/test_task_framework/internal/app/server"
 	"github.com/kirill-a-belov/test_task_framework/internal/app/server/pkg/config"
 	"github.com/kirill-a-belov/test_task_framework/pkg/logger"
 	"github.com/kirill-a-belov/test_task_framework/pkg/runner"
-	"github.com/pkg/errors"
-
-	"github.com/spf13/cobra"
-
 	"github.com/kirill-a-belov/test_task_framework/pkg/tracer"
 )
 

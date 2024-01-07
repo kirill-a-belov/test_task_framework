@@ -4,18 +4,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"github.com/kirill-a-belov/test_task_framework/internal/app/server/pkg/config"
-	"github.com/kirill-a-belov/test_task_framework/internal/pkg/protocol"
-	"github.com/kirill-a-belov/test_task_framework/pkg/test_helper"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/kirill-a-belov/test_task_framework/internal/app/server/pkg/config"
+	"github.com/kirill-a-belov/test_task_framework/internal/pkg/protocol"
+	"github.com/kirill-a-belov/test_task_framework/pkg/test_helper"
 )
 
 func TestServer_Start(t *testing.T) {
@@ -104,8 +106,9 @@ func TestServer_processor(t *testing.T) {
 			name: "Conn limit exceeded",
 			args: func() (*Server, func(io.ReadWriter) error) {
 				f := func(writer io.ReadWriter) error {
-					for {
-					}
+					time.Sleep(time.Second)
+
+					return nil
 				}
 
 				loggerMock := &test_helper.LoggerMock{}
@@ -173,7 +176,6 @@ func TestServer_Stop(t *testing.T) {
 
 		_, closed := <-s.stopChan
 		assert.False(t, closed)
-
 	})
 }
 
@@ -271,6 +273,7 @@ type listenerStub struct {
 func (*listenerStub) Accept() (net.Conn, error) {
 	return &net.TCPConn{}, nil
 }
+
 func (*listenerStub) Close() error {
 	return nil
 }

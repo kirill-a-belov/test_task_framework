@@ -2,15 +2,16 @@ package logger
 
 import (
 	"errors"
-	"github.com/stretchr/testify/mock"
 	"io"
 	stdLog "log"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/mock"
 )
 
 func Test_log_Error(t *testing.T) {
-	test_log(t, "Error")
+	logTest(t, "Error")
 }
 
 type stdOutMock struct {
@@ -24,10 +25,10 @@ func (som *stdOutMock) Write(p []byte) (n int, err error) {
 }
 
 func Test_log_Info(t *testing.T) {
-	test_log(t, "Info")
+	logTest(t, "Info")
 }
 
-func test_log(t *testing.T, method string) {
+func logTest(t *testing.T, method string) {
 	var (
 		testLog          log
 		mockCalledResult = make([]byte, 0)
@@ -37,11 +38,11 @@ func test_log(t *testing.T, method string) {
 
 	switch method {
 	case "Error":
-		mockCalledResult = []byte("example_prefixlogger.go:28:  [example_str 1]  example error \n")
+		mockCalledResult = []byte("example_prefix logger.go:28:  [example_str 1]  example error \n")
 		testFuncError = testLog.Error
 
 	case "Info":
-		mockCalledResult = []byte("example_prefixlogger.go:28:  [example_str 1]  <nil> \n")
+		mockCalledResult = []byte("example_prefix logger.go:28:  [example_str 1]  <nil> \n")
 		testFuncInfo = testLog.Info
 
 	default:
@@ -67,7 +68,7 @@ func test_log(t *testing.T, method string) {
 					Return(mock.Anything)
 
 				return testArgs{
-					prefix:     "example_prefix",
+					prefix:     "example_prefix ",
 					err:        errors.New("example error"),
 					payload:    []interface{}{"example_str", 1},
 					stdOutMock: som,
@@ -78,7 +79,6 @@ func test_log(t *testing.T, method string) {
 
 	for _, tc := range testCaseList {
 		t.Run(tc.name, func(t *testing.T) {
-
 			ta := tc.args()
 
 			l := stdLog.New(os.Stdout, ta.prefix, stdLog.Lshortfile)
@@ -92,7 +92,6 @@ func test_log(t *testing.T, method string) {
 			if testFuncInfo != nil {
 				testFuncInfo(ta.payload)
 			}
-
 		})
 	}
 }

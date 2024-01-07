@@ -11,8 +11,9 @@ func (rwm *ReadWriterMock) Write(b []byte) (int, error) {
 
 	return args.Int(0), args.Error(1)
 }
-func (cm *ReadWriterMock) Read(b []byte) (int, error) {
-	args := cm.Called(b)
+
+func (rwm *ReadWriterMock) Read(b []byte) (int, error) {
+	args := rwm.Called(b)
 
 	return args.Int(0), args.Error(1)
 }
