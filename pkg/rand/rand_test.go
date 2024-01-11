@@ -10,26 +10,26 @@ import (
 func TestRand(t *testing.T) {
 	testCaseList := []struct {
 		name      string
-		args      func() (int, int)
+		args      func() (int, int64)
 		wantError bool
 	}{
 		{
 			name: "Success",
-			args: func() (int, int) {
+			args: func() (int, int64) {
 				return 100, 1024
 			},
 			wantError: false,
 		},
 		{
 			name: "Invalid len",
-			args: func() (int, int) {
+			args: func() (int, int64) {
 				return -100, 1024
 			},
 			wantError: true,
 		},
 		{
 			name: "Invalid max",
-			args: func() (int, int) {
+			args: func() (int, int64) {
 				return 100, -1024
 			},
 			wantError: true,

@@ -29,7 +29,7 @@ func New(ctx context.Context, config *config.Config) *Server {
 		stopChan: make(chan struct{}),
 		logger:   logger.New("server"),
 		listenerStarter: func() (net.Listener, error) {
-			return net.Listen(protocol.NetworkType, fmt.Sprintf("127.0.0.1:%d", config.Port))
+			return net.Listen(protocol.NetworkType, fmt.Sprintf(":%d", config.Port))
 		},
 	}
 }

@@ -13,10 +13,10 @@ type Message struct {
 
 type Request struct {
 	Message
-	Payload []int
+	Payload []int64
 }
 
 type Response struct {
 	Message
-	Payload int
+	Payload int64
 }

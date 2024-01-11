@@ -180,7 +180,7 @@ func Test_serv(t *testing.T) {
 					Message: protocol.Message{
 						Type: protocol.MessageTypeRequest,
 					},
-					Payload: []int{1, 2, 3},
+					Payload: []int64{1, 2, 3},
 				}
 				requestBuffer := &bytes.Buffer{}
 				require.NoError(t, gob.NewEncoder(requestBuffer).Encode(request))
@@ -219,7 +219,7 @@ func Test_serv(t *testing.T) {
 					Message: protocol.Message{
 						Type: protocol.MessageTypeRequest,
 					},
-					Payload: []int{1, 2, 3},
+					Payload: []int64{1, 2, 3},
 				}
 				requestBuffer := &bytes.Buffer{}
 				require.NoError(t, gob.NewEncoder(requestBuffer).Encode(request))

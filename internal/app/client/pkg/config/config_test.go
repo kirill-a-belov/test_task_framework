@@ -16,7 +16,7 @@ func TestConfig_validate(t *testing.T) {
 		{
 			name: "Success",
 			args: Config{
-				Address: "127.0.0.1:1234",
+				Address: "localhost:1234",
 				Delay:   time.Second,
 				ConnTTL: time.Second,
 			},
@@ -25,7 +25,7 @@ func TestConfig_validate(t *testing.T) {
 		{
 			name: "Invalid address",
 			args: Config{
-				Address: "127.0.0.0.1:1234",
+				Address: "local:host:1234",
 				Delay:   time.Second,
 				ConnTTL: time.Second,
 			},
@@ -34,7 +34,7 @@ func TestConfig_validate(t *testing.T) {
 		{
 			name: "Invalid delay value",
 			args: Config{
-				Address: "127.0.0.1:1234",
+				Address: "localhost:1234",
 				Delay:   time.Hour,
 				ConnTTL: time.Second,
 			},
@@ -43,7 +43,7 @@ func TestConfig_validate(t *testing.T) {
 		{
 			name: "Invalid TTL",
 			args: Config{
-				Address: "127.0.0.1:1234",
+				Address: "localhost:1234",
 				Delay:   time.Second,
 				ConnTTL: time.Hour,
 			},

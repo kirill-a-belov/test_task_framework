@@ -98,7 +98,11 @@ func handle(conn io.ReadWriter) error {
 	ctx, span := tracer.Start(context.Background(), "internal.app.client.Client.handle")
 	defer span.End()
 
-	payload, err := rand.Rand(3, 10)
+	const (
+		payloadSize     = 3
+		payloadMaxDigit = 1024
+	)
+	payload, err := rand.Rand(payloadSize, payloadMaxDigit)
 	if err != nil {
 		return errors.Wrap(err, "generating payload")
 	}

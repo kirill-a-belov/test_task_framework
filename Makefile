@@ -28,6 +28,7 @@ linter:
 
 	@$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@$(GO_BIN)/golangci-lint run
+	@./scripts/println_detection.sh .
 
 	@echo "	Done"
 testing:

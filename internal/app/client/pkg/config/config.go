@@ -12,7 +12,7 @@ import (
 )
 
 type Config struct {
-	Address string        `env:"CLIENT_ADDRESS" validate:"tcp_addr"`
+	Address string        `env:"CLIENT_ADDRESS" validate:"hostname_port"`
 	Delay   time.Duration `env:"CLIENT_DELAY" validate:"gte=1ms,lte=1s"`
 	ConnTTL time.Duration `env:"CLIENT_CONN_TTL" validate:"gte=1ms,lte=1s"`
 }
