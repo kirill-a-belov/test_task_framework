@@ -6,12 +6,18 @@ type number interface {
 	constraints.Signed | constraints.Unsigned | constraints.Float | constraints.Complex
 }
 
+// Sum zero alloc NOTE: args will be mutated
 func Sum[N number](args ...N) N {
-	var result N
+	return sum(args, 1)
+}
 
-	for _, item := range args {
-		result += item
+func sum[N number](args []N, pos int) N {
+	if pos > len(args)-1 {
+		return args[0]
 	}
 
-	return result
+	args[0] += args[pos]
+	pos++
+
+	return sum(args, pos)
 }
