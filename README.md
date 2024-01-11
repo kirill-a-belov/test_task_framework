@@ -12,3 +12,12 @@ to save it - is a valuable.
 We can not predict which logic or core task an employer would want to implement from your side. But we can
 have a prepared, well organized code base with maximal optimization and automation. In this case, you can focus
 only on a main task and save much time of your life.
+
+### TODO primitives implementation:
+
+* TCP client-server - done
+* GRPC server
+* PostgreSQL CRUD client
+* Kafka client
+* REST server
+* Parallel processor

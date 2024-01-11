@@ -29,7 +29,7 @@ func New(ctx context.Context, config *config.Config) *Server {
 		stopChan: make(chan struct{}),
 		logger:   logger.New("server"),
 		listenerStarter: func() (net.Listener, error) {
-			return net.Listen(protocol.TCPType, fmt.Sprintf("localhost:%d", config.Port))
+			return net.Listen(protocol.NetworkType, fmt.Sprintf("127.0.0.1:%d", config.Port))
 		},
 	}
 }
@@ -86,7 +86,6 @@ func (s *Server) processor(ctx context.Context, servFunc func(io.ReadWriter) err
 
 				continue
 			}
-
 			s.connCnt.Add(1)
 			go func() {
 				defer func(conn net.Conn) {
@@ -122,7 +121,6 @@ func serv(conn io.ReadWriter) error {
 	if request.Type != protocol.MessageTypeRequest {
 		return errors.Errorf("server requrest: received wrong message (%v)", request)
 	}
-
 	if err := network.Send(ctx, conn, protocol.Response{
 		Message: protocol.Message{
 			Type: protocol.MessageTypeResponse,

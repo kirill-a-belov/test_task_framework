@@ -39,11 +39,11 @@ testing:
 building:
 	@echo "- Building"
 
-	@docker-compose -f build/docker-compose.yml build
+	@docker-compose -f deployments/docker-compose.yml build
 
 	@echo "	Done"
 
 running:
 	@echo "- Running..."
 
-	@docker-compose -f build/docker-compose.yml up
+	@docker-compose -f deployments/docker-compose.yml up

@@ -1,3 +1,3 @@
 package protocol
 
-const TCPType = "tcp"
+const NetworkType = "tcp"
