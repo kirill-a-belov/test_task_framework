@@ -10,7 +10,8 @@ services:
       SERVER_PORT: "1234"
       SERVER_CONN_POOL_SIZE: "100"
       SERVER_CONN_TTL: "1s"
-
+    networks:
+      - tcp-cs-network
   client:
     build:
       context: ${PWD}
@@ -22,3 +23,41 @@ services:
       CLIENT_CONN_TTL: "100ms"
     depends_on:
       - server
+    networks:
+      - tcp-cs-network
+  # Kafka services set ---------------------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: "2181"
+    networks:
+      - kafka-network
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+    networks:
+      - kafka-network
+    ports:
+      - 9092:9092
+  kafka-service:
+    build:
+      context: ${PWD}
+      dockerfile: ${PWD}/build/kafka/Dockerfile
+    command: ./kafka
+    environment:
+      KAFKA_ADDRESS: "kafka:9092"
+      KAFKA_DELAY: "1s"
+      KAFKA_CONN_TTL: "500ms"
+    depends_on:
+      - kafka
+    networks:
+      - kafka-network
+networks:
+  kafka-network:
+    driver: bridge
+  tcp-cs-network:
+    driver: bridge
