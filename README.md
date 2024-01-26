@@ -18,6 +18,6 @@ only on a main task and save much time of your life.
 * TCP client-server - done
 * GRPC server
 * PostgreSQL CRUD client
-* Kafka client
+* Kafka client-server - done
 * REST server
 * Parallel processor
